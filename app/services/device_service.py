@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import cast
+
 from app.events import create_offline_alert
 from app.models import AlertResponse, DeviceCreate, DeviceResponse, StatusUpdate
-from app.repositories.device_repository import InMemoryDeviceRepository
+from app.repositories.device_repository import DeviceRepository, InMemoryDeviceRepository
 
 
 class DeviceAlreadyExistsError(Exception):
@@ -16,7 +18,7 @@ class DeviceNotFoundError(Exception):
 
 
 class DeviceService:
-    def __init__(self, repository: InMemoryDeviceRepository) -> None:
+    def __init__(self, repository: DeviceRepository) -> None:
         self._repository = repository
 
     def register(self, device: DeviceCreate) -> DeviceResponse:
@@ -46,7 +48,7 @@ class DeviceService:
         if device is None:
             raise DeviceNotFoundError(device_id)
         if current.status == "online" and status_update.status == "offline":
-            create_offline_alert(self._repository, device_id)
+            create_offline_alert(cast(InMemoryDeviceRepository, self._repository), device_id)
         return device
 
 device_service = DeviceService(InMemoryDeviceRepository())

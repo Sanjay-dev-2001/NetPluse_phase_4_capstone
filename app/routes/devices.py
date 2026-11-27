@@ -1,13 +1,20 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
+from app.db.session import get_db
 from app.models import AlertResponse, DeviceCreate, DeviceResponse, StatusUpdate
+from app.repositories.mysql_device_repository import MySqlDeviceRepository
 from app.services.device_service import (
     DeviceAlreadyExistsError,
     DeviceNotFoundError,
-    device_service,
+    DeviceService,
 )
 
 router = APIRouter()
+
+
+def get_device_service(db: Session = Depends(get_db)) -> DeviceService:
+    return DeviceService(MySqlDeviceRepository(db, commit_on_write=False))
 
 
 @router.post(
@@ -21,15 +28,25 @@ router = APIRouter()
         }
     },
 )
-def register_device(device: DeviceCreate) -> DeviceResponse:
+def register_device(
+    device: DeviceCreate,
+    device_service: DeviceService = Depends(get_device_service),
+    db: Session = Depends(get_db),
+) -> DeviceResponse:
     try:
-        return device_service.register(device)
+        result = device_service.register(device)
+        db.commit()
+        return result
     except DeviceAlreadyExistsError as error:
+        db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except Exception:
+        db.rollback()
+        raise
 
 
 @router.get("/devices", response_model=list[DeviceResponse], tags=["devices"])
-def list_devices() -> list[DeviceResponse]:
+def list_devices(device_service: DeviceService = Depends(get_device_service)) -> list[DeviceResponse]:
     return device_service.list()
 
 
@@ -39,7 +56,9 @@ def list_devices() -> list[DeviceResponse]:
     tags=["devices"],
     responses={status.HTTP_404_NOT_FOUND: {"description": "Device not found."}},
 )
-def get_device(device_id: str) -> DeviceResponse:
+def get_device(
+    device_id: str, device_service: DeviceService = Depends(get_device_service)
+) -> DeviceResponse:
     try:
         return device_service.get(device_id)
     except DeviceNotFoundError as error:
@@ -52,15 +71,26 @@ def get_device(device_id: str) -> DeviceResponse:
     tags=["devices"],
     responses={status.HTTP_404_NOT_FOUND: {"description": "Device not found."}},
 )
-def update_device_status(device_id: str, changes: StatusUpdate) -> DeviceResponse:
+def update_device_status(
+    device_id: str,
+    changes: StatusUpdate,
+    device_service: DeviceService = Depends(get_device_service),
+    db: Session = Depends(get_db),
+) -> DeviceResponse:
     try:
-        return device_service.update_status(device_id, changes)
+        result = device_service.update_status(device_id, changes)
+        db.commit()
+        return result
     except DeviceNotFoundError as error:
+        db.rollback()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except Exception:
+        db.rollback()
+        raise
 
 
 @router.get("/alerts", response_model=list[AlertResponse], tags=["alerts"])
-def list_alerts() -> list[AlertResponse]:
+def list_alerts(device_service: DeviceService = Depends(get_device_service)) -> list[AlertResponse]:
     return device_service.list_alerts()
 
 

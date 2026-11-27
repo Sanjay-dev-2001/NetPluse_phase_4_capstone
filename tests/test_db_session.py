@@ -9,7 +9,7 @@ from app.db import session
 
 def test_mysql_settings_build_url_with_special_characters(monkeypatch):
     with monkeypatch.context() as environment:
-        environment.setattr("dotenv.load_dotenv", lambda: False)
+        environment.setattr("dotenv.load_dotenv", lambda *args, **kwargs: False)
         environment.delenv("DATABASE_URL", raising=False)
         environment.setenv("MYSQL_HOST", "db.example.com")
         environment.setenv("MYSQL_PORT", "3307")
@@ -26,6 +26,7 @@ def test_mysql_settings_build_url_with_special_characters(monkeypatch):
 
 def test_database_url_override(monkeypatch):
     with monkeypatch.context() as environment:
+        environment.setattr("dotenv.load_dotenv", lambda *args, **kwargs: False)
         environment.setenv("DATABASE_URL", "mysql+pymysql://user:pass@db/other")
         importlib.reload(config)
         assert config.DATABASE_URL == "mysql+pymysql://user:pass@db/other"
