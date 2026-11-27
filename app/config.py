@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy.engine import URL
 
-load_dotenv()
+load_dotenv(override=True)
 
 MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
