@@ -14,6 +14,7 @@ class Device(Base):
     device_type: Mapped[str] = mapped_column(String(50), nullable=False)
     ip_address: Mapped[str] = mapped_column(String(45), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="online")
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.current_timestamp()
     )
