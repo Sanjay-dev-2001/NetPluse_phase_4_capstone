@@ -11,4 +11,5 @@ htmlcov/
 !.env.example
 build/
 dist/
-*.egg-info/.vscode/
+*.egg-info/
+.vscode/
